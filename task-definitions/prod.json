@@ -1,0 +1,84 @@
+{
+    "taskDefinitionArn": "arn:aws:ecs:ap-south-1:292003219542:task-definition/epaper-test:3",
+    "containerDefinitions": [
+        {
+            "name": "nginx-contaner",
+            "image": "292003219542.dkr.ecr.ap-south-1.amazonaws.com/mw-test-repo:latest",
+            "cpu": 0,
+            "portMappings": [
+                {
+                    "name": "nginx-contaner-80-tcp",
+                    "containerPort": 3000,
+                    "hostPort": 0,
+                    "protocol": "tcp",
+                    "appProtocol": "http"
+                }
+            ],
+            "essential": true,
+            "environment": [],
+            "mountPoints": [],
+            "volumesFrom": [],
+            "logConfiguration": {
+                "logDriver": "awslogs",
+                "options": {
+                    "awslogs-group": "/ecs/epaper-test",
+                    "mode": "non-blocking",
+                    "awslogs-create-group": "true",
+                    "max-buffer-size": "25m",
+                    "awslogs-region": "ap-south-1",
+                    "awslogs-stream-prefix": "ecs"
+                }
+            },
+            "systemControls": []
+        }
+    ],
+    "family": "epaper-test",
+    "taskRoleArn": "arn:aws:iam::292003219542:role/dragster-service-task-role-dev",
+    "executionRoleArn": "arn:aws:iam::292003219542:role/dragster-service-execution-role-dev",
+    "networkMode": "bridge",
+    "revision": 3,
+    "volumes": [],
+    "status": "ACTIVE",
+    "requiresAttributes": [
+        {
+            "name": "com.amazonaws.ecs.capability.logging-driver.awslogs"
+        },
+        {
+            "name": "ecs.capability.execution-role-awslogs"
+        },
+        {
+            "name": "com.amazonaws.ecs.capability.ecr-auth"
+        },
+        {
+            "name": "com.amazonaws.ecs.capability.docker-remote-api.1.19"
+        },
+        {
+            "name": "com.amazonaws.ecs.capability.docker-remote-api.1.28"
+        },
+        {
+            "name": "com.amazonaws.ecs.capability.task-iam-role"
+        },
+        {
+            "name": "ecs.capability.execution-role-ecr-pull"
+        },
+        {
+            "name": "com.amazonaws.ecs.capability.docker-remote-api.1.29"
+        }
+    ],
+    "placementConstraints": [],
+    "compatibilities": [
+        "EC2"
+    ],
+    "requiresCompatibilities": [
+        "EC2"
+    ],
+    "cpu": "1024",
+    "memory": "1024",
+    "runtimePlatform": {
+        "cpuArchitecture": "X86_64",
+        "operatingSystemFamily": "LINUX"
+    },
+    "registeredAt": "2024-11-22T09:36:23.769Z",
+    "registeredBy": "arn:aws:sts::292003219542:assumed-role/AWSReservedSSO_AdministratorAccess_46aff996ac442a43/akash.p@solutelabs.com",
+    "tags": []
+}
