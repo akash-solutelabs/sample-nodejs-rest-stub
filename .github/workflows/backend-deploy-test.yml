@@ -59,5 +59,5 @@ jobs:
         task-definition: ${{ steps.task-def.outputs.task-definition }}
         service: ecs-mw-service
         cluster: middleware-test-cluster
-        force-new-deployment: true  # This forces ECS to replace the running tasks
+        # force-new-deployment: true  # This forces ECS to replace the running tasks
 
