@@ -1,7 +1,9 @@
 name: Deploy to AWS ECS (Master)
 
 on:
-  workflow_dispatch:  # This allows manual triggering from the GitHub UI
+  push:
+    branches:
+      - ci-cd-test
  
 jobs:
   build:
