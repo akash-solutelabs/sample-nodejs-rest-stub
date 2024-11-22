@@ -59,14 +59,5 @@ jobs:
         task-definition: ${{ steps.task-def.outputs.task-definition }}
         service: ecs-mw-service
         cluster: middleware-test-cluster
-        #wait-for-service-stability: true
-        #wait-for-minutes: 10 minutes
-         # Deploy the ECS task definition with force-new-deployment
-         
-    - name: Deploy Amazon ECS task definition
-      uses: aws-actions/amazon-ecs-deploy-task-definition@v1
-      with:
-        task-definition: ${{ steps.task-def.outputs.task-definition }}
-        service: ecs-mw-service
-        cluster: middleware-test-cluster
         force-new-deployment: true  # This forces ECS to replace the running tasks
+
