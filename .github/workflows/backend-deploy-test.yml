@@ -3,18 +3,16 @@ name: Deploy to AWS ECS (Master)
 on:
   push:
     branches:
-      - ci-cd-test
- 
+      - rollback-test
+
 jobs:
   build:
     runs-on: ubuntu-latest
 
     steps:
-   
     - name: Checkout
       uses: actions/checkout@v2
-      
-    # We used IAM user ECR-ECS-Test-access Access and Secret Key
+
     - name: Configure AWS credentials
       uses: aws-actions/configure-aws-credentials@v1
       with:
@@ -32,26 +30,29 @@ jobs:
         ECR_REGISTRY: 292003219542.dkr.ecr.ap-south-1.amazonaws.com
         ECR_REPOSITORY: mw-test-repo
         IMAGE_TAG: ${{ github.sha }}
-        REGION: ap-south-1
-        ECS_CLUSTER: middleware-test-cluster
-        SERVICE_NAME: ecs-mw-service
         
       run: |
-        # Build a docker container and
-        # push it to ECR so that it can
-        # be deployed to ECS.
-        # cd api
         docker build -f Dockerfile -t $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG .  
         docker push $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
         echo "::set-output name=image::$ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG"
-        
-    - name: Fill in the new image ID in the Amazon ECS task definition for nginx-contaner container
+
+    - name: Fill in the new image ID in the Amazon ECS task definition
       id: task-def
       uses: aws-actions/amazon-ecs-render-task-definition@v1
       with:
         task-definition: task-definitions/prod.json
-        container-name: nginx-contaner
+        container-name: nginx-container
         image: ${{ steps.build-image.outputs.image }}
+
+    - name: Save current task definition for rollback
+      id: save-current-task-def
+      run: |
+        aws ecs describe-services \
+          --cluster middleware-test-cluster \
+          --services ecs-mw-service \
+          --query "services[0].taskDefinition" \
+          --output text > previous-task-def.json
+        echo "Saved previous task definition."
 
     - name: Stop the previous ECS service
       run: |
@@ -61,20 +62,31 @@ jobs:
           --desired-count 0
         echo "Stopped previous service ecs-mw-service"
 
-    - name: Deploy Amazon ECS task definition
+    - name: Deploy new task definition
       uses: aws-actions/amazon-ecs-deploy-task-definition@v1
       with:
         task-definition: ${{ steps.task-def.outputs.task-definition }}
         service: ecs-mw-service
         cluster: middleware-test-cluster
-        #wait-for-service-stability: true
-        #wait-for-minutes: 10 minutes
+        wait-for-service-stability: true
 
-    - name: Restore ECS desired count
+    - name: Rollback on failure
+      if: failure()
       run: |
-        # Scale the ECS service back to its desired count
+        echo "Deployment failed. Rolling back to the previous task definition..."
+        PREVIOUS_TASK_DEF=$(cat previous-task-def.json)
+        aws ecs update-service \
+          --cluster middleware-test-cluster \
+          --service ecs-mw-service \
+          --task-definition $PREVIOUS_TASK_DEF \
+          --desired-count 1
+        echo "Rollback complete. Previous version restored."
+
+    - name: Restore desired count
+      if: success()
+      run: |
         aws ecs update-service \
           --cluster middleware-test-cluster \
           --service ecs-mw-service \
           --desired-count 1
-        echo "Restored desired count to 1 for service ecs-mw-service"   
+        echo "Restored desired count to 1 for service ecs-mw-service."
