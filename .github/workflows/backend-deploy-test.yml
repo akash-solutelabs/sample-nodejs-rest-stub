@@ -30,6 +30,9 @@ jobs:
         ECR_REGISTRY: 292003219542.dkr.ecr.ap-south-1.amazonaws.com
         ECR_REPOSITORY: mw-test-repo
         IMAGE_TAG: ${{ github.sha }}
+        REGION: ap-south-1
+        ECS_CLUSTER: middleware-test-cluster
+        SERVICE_NAME: ecs-mw-service
         
       run: |
         docker build -f Dockerfile -t $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG .  
