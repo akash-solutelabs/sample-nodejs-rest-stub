@@ -1,9 +1,7 @@
 name: Deploy to AWS ECS (Master)
 
 on:
-  push:
-    branches:
-      - ci-cd-test
+  workflow_dispatch:  # This allows manual triggering from the GitHub UI
  
 jobs:
   build:
@@ -14,7 +12,7 @@ jobs:
     - name: Checkout
       uses: actions/checkout@v2
       
-#We used IAM user ECR-ECS-Test-access Access and Secret Key
+    # We used IAM user ECR-ECS-Test-access Access and Secret Key
     - name: Configure AWS credentials
       uses: aws-actions/configure-aws-credentials@v1
       with:
@@ -41,11 +39,11 @@ jobs:
         # push it to ECR so that it can
         # be deployed to ECS.
         # cd api
-        docker build -f Dockerfile -t $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG .
+        docker build -f Dockerfile -t $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG .  
         docker push $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
         echo "::set-output name=image::$ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG"
         
-    - name: Fill in the new image ID in the Amazon ECS task definition for TPMLMWDEVAPI container
+    - name: Fill in the new image ID in the Amazon ECS task definition for nginx-contaner container
       id: task-def
       uses: aws-actions/amazon-ecs-render-task-definition@v1
       with:
@@ -53,11 +51,28 @@ jobs:
         container-name: nginx-contaner
         image: ${{ steps.build-image.outputs.image }}
 
+    - name: Stop the previous ECS service
+      run: |
+        aws ecs update-service \
+          --cluster middleware-test-cluster \
+          --service ecs-mw-service \
+          --desired-count 0
+        echo "Stopped previous service ecs-mw-service"
+
     - name: Deploy Amazon ECS task definition
       uses: aws-actions/amazon-ecs-deploy-task-definition@v1
       with:
         task-definition: ${{ steps.task-def.outputs.task-definition }}
         service: ecs-mw-service
         cluster: middleware-test-cluster
-        # force-new-deployment: true  # This forces ECS to replace the running tasks
+        #wait-for-service-stability: true
+        #wait-for-minutes: 10 minutes
 
+    - name: Restore ECS desired count
+      run: |
+        # Scale the ECS service back to its desired count
+        aws ecs update-service \
+          --cluster middleware-test-cluster \
+          --service ecs-mw-service \
+          --desired-count 1
+        echo "Restored desired count to 1 for service ecs-mw-service"   
