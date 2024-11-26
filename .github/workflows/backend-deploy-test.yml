@@ -32,6 +32,9 @@ jobs:
         ECR_REGISTRY: 178266995806.dkr.ecr.ap-south-1.amazonaws.com
         ECR_REPOSITORY: tpml-mw-api
         IMAGE_TAG: ${{ github.sha }}
+        REGION: ap-south-1
+        ECS_CLUSTER: middleware-test-cluster
+        SERVICE_NAME: ecs-mw-service
       run: |
         docker build -f Dockerfile -t $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG .
         docker push $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
