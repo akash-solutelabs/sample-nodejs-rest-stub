@@ -29,8 +29,8 @@ jobs:
     - name: Build, tag, and push image to Amazon ECR
       id: build-image
       env:
-        ECR_REGISTRY: 178266995806.dkr.ecr.ap-south-1.amazonaws.com
-        ECR_REPOSITORY: tpml-mw-api
+        ECR_REGISTRY: 292003219542.dkr.ecr.ap-south-1.amazonaws.com
+        ECR_REPOSITORY: mw-test-repo
         IMAGE_TAG: ${{ github.sha }}
         REGION: ap-south-1
         ECS_CLUSTER: middleware-test-cluster
