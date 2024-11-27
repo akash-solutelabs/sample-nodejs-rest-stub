@@ -3,8 +3,8 @@ name: Deploy to AWS ECS (Master)
 on:
   push:
     branches:
-      - rollback-test
-
+      - start-stop
+ 
 jobs:
   build:
     runs-on: ubuntu-latest
@@ -12,7 +12,8 @@ jobs:
     steps:
     - name: Checkout
       uses: actions/checkout@v2
-
+      
+    # Configure AWS credentials
     - name: Configure AWS credentials
       uses: aws-actions/configure-aws-credentials@v1
       with:
@@ -30,14 +31,27 @@ jobs:
         ECR_REGISTRY: 292003219542.dkr.ecr.ap-south-1.amazonaws.com
         ECR_REPOSITORY: mw-test-repo
         IMAGE_TAG: ${{ github.sha }}
-        REGION: ap-south-1
-        ECS_CLUSTER: middleware-test-cluster
-        SERVICE_NAME: ecs-mw-service
-        
       run: |
-        docker build -f Dockerfile -t $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG .  
+        docker build -f Dockerfile -t $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG .
         docker push $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
         echo "::set-output name=image::$ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG"
+
+    - name: Backup current ECS service configuration
+      id: backup-service
+      run: |
+        echo "Backing up current ECS service configuration..."
+        SERVICE_DESC=$(aws ecs describe-services \
+          --cluster middleware-test-cluster \
+          --services ecs-mw-service \
+          --query 'services[0]' \
+          --output json)
+        echo "$SERVICE_DESC" > service-backup.json
+        PREVIOUS_TASK_DEFINITION=$(echo $SERVICE_DESC | jq -r '.taskDefinition')
+        PREVIOUS_DESIRED_COUNT=$(echo $SERVICE_DESC | jq -r '.desiredCount')
+        echo "Previous task definition: $PREVIOUS_TASK_DEFINITION"
+        echo "Previous desired count: $PREVIOUS_DESIRED_COUNT"
+        echo "::set-output name=task_definition::$PREVIOUS_TASK_DEFINITION"
+        echo "::set-output name=desired_count::$PREVIOUS_DESIRED_COUNT"
 
     - name: Fill in the new image ID in the Amazon ECS task definition
       id: task-def
@@ -47,49 +61,69 @@ jobs:
         container-name: nginx-contaner
         image: ${{ steps.build-image.outputs.image }}
 
-    - name: Save current task definition for rollback
-      id: save-current-task-def
-      run: |
-        aws ecs describe-services \
-          --cluster middleware-test-cluster \
-          --services ecs-mw-service \
-          --query "services[0].taskDefinition" \
-          --output text > previous-task-def.json
-        echo "Saved previous task definition."
-
     - name: Stop the previous ECS service
       run: |
+        echo "Stopping service ecs-mw-service in cluster middleware-test-cluster..."
         aws ecs update-service \
           --cluster middleware-test-cluster \
           --service ecs-mw-service \
           --desired-count 0
-        echo "Stopped previous service ecs-mw-service"
+        echo "Service stopped. Waiting for tasks to terminate..."
+        aws ecs wait services-stable \
+          --cluster middleware-test-cluster \
+          --services ecs-mw-service
+        echo "Service ecs-mw-service is now stopped."
 
-    - name: Deploy new task definition
+    - name: Deploy Amazon ECS task definition
+      id: deploy-new
       uses: aws-actions/amazon-ecs-deploy-task-definition@v1
       with:
         task-definition: ${{ steps.task-def.outputs.task-definition }}
         service: ecs-mw-service
         cluster: middleware-test-cluster
-        wait-for-service-stability: true
+        wait-for-service-stability: false  # Disable default stability wait
 
-    - name: Rollback on failure
-      if: failure()
+    - name: Monitor service stabilization
+      id: monitor-service
       run: |
-        echo "Deployment failed. Rolling back to the previous task definition..."
-        PREVIOUS_TASK_DEF=$(cat previous-task-def.json)
-        aws ecs update-service \
-          --cluster middleware-test-cluster \
-          --service ecs-mw-service \
-          --task-definition $PREVIOUS_TASK_DEF \
-          --desired-count 1
-        echo "Rollback complete. Previous version restored."
-
-    - name: Restore desired count
-      if: success()
-      run: |
+        echo "Restoring desired count to 1 for service ecs-mw-service..."
         aws ecs update-service \
           --cluster middleware-test-cluster \
           --service ecs-mw-service \
           --desired-count 1
-        echo "Restored desired count to 1 for service ecs-mw-service."
+        echo "Desired count set to 1. Polling service status..."
+
+        # Poll until the service has the desired count of running tasks
+        for i in {1..30}; do
+          RUNNING_TASKS=$(aws ecs describe-services \
+            --cluster middleware-test-cluster \
+            --services ecs-mw-service \
+            --query "services[0].runningCount" \
+            --output text)
+          
+          if [ "$RUNNING_TASKS" -eq 1 ]; then
+            echo "Service ecs-mw-service is stable with 1 running task."
+            exit 0
+          fi
+          
+          echo "Waiting for service to stabilize... Attempt $i/30"
+          sleep 10  # Wait for 10 seconds before retrying
+        done
+
+        echo "Error: Service did not stabilize after 5 minutes."
+        exit 1
+
+    - name: Rollback to previous task definition
+      if: failure()  # Only run if the previous step failed
+      run: |
+        echo "Rolling back to previous task definition..."
+        aws ecs update-service \
+          --cluster middleware-test-cluster \
+          --service ecs-mw-service \
+          --task-definition ${{ steps.backup-service.outputs.task_definition }} \
+          --desired-count ${{ steps.backup-service.outputs.desired_count }}
+        echo "Rollback initiated. Waiting for service stabilization..."
+        aws ecs wait services-stable \
+          --cluster middleware-test-cluster \
+          --services ecs-mw-service
+        echo "Rollback successful. Service ecs-mw-service is now stable."
