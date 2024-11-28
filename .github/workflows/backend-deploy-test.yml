@@ -80,14 +80,14 @@ jobs:
           --desired-count 1
         echo "Desired count set to 1"
 
-    - name: Deploy Amazon ECS task definition
-      uses: aws-actions/amazon-ecs-deploy-task-definition@v1
-      with:
-        task-definition: ${{ steps.task-def.outputs.task-definition }}
-        service: ecs-mw-service
-        cluster: middleware-test-cluster
-        wait-for-service-stability: true  # Disable default stability wait
-
-
-
-
+    - name: Wait for Service stability
+      run: |
+        echo "Checking service stability"
+        if aws ecs wait service-stability \
+          --cluster middleware-test-cluster \
+          --service ecs-mw-service; then
+          echo "Service is up"
+        else 
+          echo "Service is unstable"
+          exit 1
+        fi
