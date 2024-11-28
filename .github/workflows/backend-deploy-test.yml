@@ -78,7 +78,7 @@ jobs:
           --cluster middleware-test-cluster \
           --service ecs-mw-service \
           --desired-count 1
-        echo "Desired count set to 1. Polling service status...
+        echo "Desired count set to 1"
 
     - name: Deploy Amazon ECS task definition
       uses: aws-actions/amazon-ecs-deploy-task-definition@v1
