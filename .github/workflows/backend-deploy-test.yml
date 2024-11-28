@@ -81,24 +81,4 @@ jobs:
 
 
 
-        # # Poll until the service has the desired count of running tasks
-        # for i in {1..30}; do
-        #   RUNNING_TASKS=$(aws ecs describe-services \
-        #     --cluster middleware-test-cluster \
-        #     --services ecs-mw-service \
-        #     --query "services[0].runningCount" \
-        #     --output text)
-          
-        #   if [ "$RUNNING_TASKS" -eq 1 ]; then
-        #     echo "Service ecs-mw-service is stable with 1 running task."
-        #     break
-        #   fi
-          
-        #   echo "Waiting for service to stabilize... Attempt $i/30"
-          sleep 10  # Wait for 10 seconds before retrying
-        done
 
-        if [ "$RUNNING_TASKS" -ne 1 ]; then
-          echo "Error: Service did not stabilize after 5 minutes."
-          exit 1
-        fi
