@@ -83,7 +83,7 @@ jobs:
         for i in {1..30}; do
           RUNNING_TASKS=$(aws ecs describe-services \
             --cluster middleware-test-cluster \
-            --services TPMLQTMWAPI \
+            --services ecs-mw-service \
             --query "services[0].runningCount" \
             --output text)
           
