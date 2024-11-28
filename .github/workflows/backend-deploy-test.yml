@@ -83,7 +83,7 @@ jobs:
     - name: Wait for Service stability
       run: |
         echo "Checking service stability"
-        if aws ecs wait service-stability \
+        if aws ecs wait services-stable \
           --cluster middleware-test-cluster \
           --service ecs-mw-service; then
           echo "Service is up"
