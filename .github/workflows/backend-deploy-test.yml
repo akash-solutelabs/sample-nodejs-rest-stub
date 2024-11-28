@@ -49,35 +49,35 @@ jobs:
 
         image: ${{ steps.build-image.outputs.image }}
 
-    - name: Stop the previous ECS service
-      run: |
-        echo "Stopping service ecs-mw-service in cluster middleware-test-cluster..."
-        aws ecs update-service \
-          --cluster middleware-test-cluster \
-          --service ecs-mw-service \
-          --desired-count 0
-        echo "Service stopped. Waiting for tasks to terminate..."
-        aws ecs wait services-stable \
-          --cluster middleware-test-cluster \
-          --services ecs-mw-service
-        echo "Service ecs-mw-service is now stopped."
+    # - name: Stop the previous ECS service
+    #   run: |
+    #     echo "Stopping service ecs-mw-service in cluster middleware-test-cluster..."
+    #     aws ecs update-service \
+    #       --cluster middleware-test-cluster \
+    #       --service ecs-mw-service \
+    #       --desired-count 0
+    #     echo "Service stopped. Waiting for tasks to terminate..."
+    #     aws ecs wait services-stable \
+    #       --cluster middleware-test-cluster \
+    #       --services ecs-mw-service
+    #     echo "Service ecs-mw-service is now stopped."
         
-    - name: Restore ECS desired count
-      run: |
-        echo "Restoring desired count to 1 for service ecs-mw-service..."
-        aws ecs update-service \
-          --cluster middleware-test-cluster \
-          --service ecs-mw-service \
-          --desired-count 1
-        echo "Desired count set to 1. Polling service status...
+    # - name: Restore ECS desired count
+    #   run: |
+    #     echo "Restoring desired count to 1 for service ecs-mw-service..."
+    #     aws ecs update-service \
+    #       --cluster middleware-test-cluster \
+    #       --service ecs-mw-service \
+    #       --desired-count 1
+    #     echo "Desired count set to 1. Polling service status...
 
-    - name: Deploy Amazon ECS task definition
-      uses: aws-actions/amazon-ecs-deploy-task-definition@v1
-      with:
-        task-definition: ${{ steps.task-def.outputs.task-definition }}
-        service: ecs-mw-service
-        cluster: middleware-test-cluster
-        wait-for-service-stability: true  # Disable default stability wait
+    # - name: Deploy Amazon ECS task definition
+    #   uses: aws-actions/amazon-ecs-deploy-task-definition@v1
+    #   with:
+    #     task-definition: ${{ steps.task-def.outputs.task-definition }}
+    #     service: ecs-mw-service
+    #     cluster: middleware-test-cluster
+    #     wait-for-service-stability: true  # Disable default stability wait
 
 
 
