@@ -69,7 +69,7 @@ jobs:
         task-definition: ${{ steps.task-def.outputs.task-definition }}
         service: ecs-mw-service
         cluster: middleware-test-cluster
-        wait-for-service-stability: false  # Disable default stability wait
+        # wait-for-service-stability: false  # Disable default stability wait
         
     - name: Restore ECS desired count
       run: |
