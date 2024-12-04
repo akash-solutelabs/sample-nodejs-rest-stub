@@ -61,7 +61,7 @@ jobs:
             --service-name ecs-mw-service \
             --query "taskArns" \
             --output text)
-          
+
           if [ -z "$TASK_ARNS" ]; then
             echo "No tasks found for the service. Assuming all tasks are STOPPED."
             break
@@ -86,7 +86,7 @@ jobs:
             fi
           done
 
-          if [ "$STOPPED_COUNT" -eq "$TOTAL_TASKS" ]; then
+          if [ "$STOPPED_COUNT" -eq "$TOTAL_TASKS" ] && [ "$DEACTIVATING_COUNT" -eq 0 ]; then
             echo "All tasks have reached STOPPED state."
             break
           fi
