@@ -65,7 +65,7 @@ jobs:
           RUNNING_COUNT=$(aws ecs describe-services \
             --cluster middleware-test-cluster \
             --services ecs-mw-service \
-            --query services[0].runningCount" \
+            --query "services[0].runningCount" \
             --output text)
           
           if [ "$RUNNING_COUNT" -eq 0 ] && [ "$SERVICE_STATUS" == "INACTIVE" ]; then
