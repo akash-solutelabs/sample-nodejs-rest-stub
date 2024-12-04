@@ -40,7 +40,7 @@ jobs:
       uses: aws-actions/amazon-ecs-render-task-definition@v1
       with:
         task-definition: task-definitions/prod.json
-        container-name: nginx-contaner
+        container-name: nginx-container
         image: ${{ steps.build-image.outputs.image }}
 
     - name: Stop the ECS service
@@ -68,7 +68,7 @@ jobs:
           fi
 
           STOPPED_COUNT=0
-          IN_PROGRESS=0
+          DEACTIVATING_COUNT=0
           TOTAL_TASKS=$(echo "$TASK_ARNS" | wc -w)
 
           for TASK_ARN in $TASK_ARNS; do
@@ -82,7 +82,7 @@ jobs:
             if [ "$TASK_STATUS" == "STOPPED" ]; then
               STOPPED_COUNT=$((STOPPED_COUNT + 1))
             elif [ "$TASK_STATUS" == "DEACTIVATING" ]; then
-              IN_PROGRESS=$((IN_PROGRESS + 1))
+              DEACTIVATING_COUNT=$((DEACTIVATING_COUNT + 1))
             fi
           done
 
@@ -91,7 +91,7 @@ jobs:
             break
           fi
 
-          echo "$STOPPED_COUNT of $TOTAL_TASKS tasks are STOPPED. $IN_PROGRESS tasks are still DEACTIVATING. Retrying in 10 seconds..."
+          echo "$STOPPED_COUNT of $TOTAL_TASKS tasks are STOPPED. $DEACTIVATING_COUNT tasks are still DEACTIVATING. Retrying in 10 seconds..."
           sleep 10
         done
 
