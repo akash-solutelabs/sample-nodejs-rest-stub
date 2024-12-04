@@ -40,7 +40,7 @@ jobs:
       uses: aws-actions/amazon-ecs-render-task-definition@v1
       with:
         task-definition: task-definitions/prod.json
-        container-name: nginx-container
+        container-name: nginx-contaner
         image: ${{ steps.build-image.outputs.image }}
 
     - name: Stop the ECS service
