@@ -61,13 +61,14 @@ jobs:
             --service-name ecs-mw-service \
             --query "taskArns" \
             --output text)
-
+          
           if [ -z "$TASK_ARNS" ]; then
             echo "No tasks found for the service. Assuming all tasks are STOPPED."
             break
           fi
 
           STOPPED_COUNT=0
+          IN_PROGRESS=0
           TOTAL_TASKS=$(echo "$TASK_ARNS" | wc -w)
 
           for TASK_ARN in $TASK_ARNS; do
@@ -81,7 +82,7 @@ jobs:
             if [ "$TASK_STATUS" == "STOPPED" ]; then
               STOPPED_COUNT=$((STOPPED_COUNT + 1))
             elif [ "$TASK_STATUS" == "DEACTIVATING" ]; then
-              echo "Task $TASK_ARN is in DEACTIVATING state. Waiting for it to fully stop."
+              IN_PROGRESS=$((IN_PROGRESS + 1))
             fi
           done
 
@@ -90,7 +91,7 @@ jobs:
             break
           fi
 
-          echo "$STOPPED_COUNT of $TOTAL_TASKS tasks are STOPPED. Retrying in 10 seconds..."
+          echo "$STOPPED_COUNT of $TOTAL_TASKS tasks are STOPPED. $IN_PROGRESS tasks are still DEACTIVATING. Retrying in 10 seconds..."
           sleep 10
         done
 
