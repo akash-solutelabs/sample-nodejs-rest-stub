@@ -59,13 +59,13 @@ jobs:
           SERVICE_STATUS=$(aws ecs describe-services \
             --cluster middleware-test-cluster \
             --services ecs-mw-service \
-            --query "services[0].status" \
+            --query 'services[0].deployments[?status==`PRIMARY`].{RunningTasks:runningCount, DesiredTasks:desiredCount, Status:status}' \
             --output text)
             echo "$SERVICE_STATUS"
           RUNNING_COUNT=$(aws ecs describe-services \
             --cluster middleware-test-cluster \
             --services ecs-mw-service \
-            --query 'services[0].deployments[?status==`PRIMARY`].{RunningTasks:runningCount, DesiredTasks:desiredCount, Status:status}' \
+            --query services[0].runningCount" \
             --output text)
           
           if [ "$RUNNING_COUNT" -eq 0 ] && [ "$SERVICE_STATUS" == "INACTIVE" ]; then
