@@ -3,8 +3,8 @@ name: Deploy to AWS ECS (Master)
 on:
   push:
     branches:
-      - start-stop-3v2
- 
+      - start-stop-3-v2
+
 jobs:
   build:
     runs-on: ubuntu-latest
@@ -30,9 +30,6 @@ jobs:
         ECR_REGISTRY: 292003219542.dkr.ecr.ap-south-1.amazonaws.com
         ECR_REPOSITORY: mw-test-repo
         IMAGE_TAG: ${{ github.sha }}
-        REGION: ap-south-1
-        ECS_CLUSTER: middleware-test-cluster
-        SERVICE_NAME: ecs-mw-service
       run: |
         docker build -f Dockerfile -t $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG .
         docker push $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
@@ -46,20 +43,54 @@ jobs:
         container-name: nginx-contaner
         image: ${{ steps.build-image.outputs.image }}
 
-    - name: Stop the ECS service and wait for it to stop
+    - name: Stop the ECS service
       run: |
         echo "Stopping service ecs-mw-service in cluster middleware-test-cluster..."
         aws ecs update-service \
           --cluster middleware-test-cluster \
           --service ecs-mw-service \
           --desired-count 0
-        echo "Service stop command issued. Waiting for running tasks to stop..."
+        echo "Service stop command issued."
 
-        # Wait for all running tasks to stop
-        aws ecs wait services-inactive \
-          --cluster middleware-test-cluster \
-          --services ecs-mw-service
-        echo "All running tasks for service ecs-mw-service have stopped."
+    - name: Wait for all tasks to reach STOPPED state
+      run: |
+        echo "Waiting for all tasks to reach STOPPED state..."
+        while true; do
+          TASK_ARNS=$(aws ecs list-tasks \
+            --cluster middleware-test-cluster \
+            --service-name ecs-mw-service \
+            --query "taskArns" \
+            --output text)
+          
+          if [ -z "$TASK_ARNS" ]; then
+            echo "No tasks found for the service. Assuming all tasks are STOPPED."
+            break
+          fi
+
+          STOPPED_COUNT=0
+          TOTAL_TASKS=$(echo "$TASK_ARNS" | wc -w)
+
+          for TASK_ARN in $TASK_ARNS; do
+            TASK_STATUS=$(aws ecs describe-tasks \
+              --cluster middleware-test-cluster \
+              --tasks $TASK_ARN \
+              --query "tasks[0].lastStatus" \
+              --output text)
+            echo "Task $TASK_ARN status: $TASK_STATUS"
+
+            if [ "$TASK_STATUS" == "STOPPED" ]; then
+              STOPPED_COUNT=$((STOPPED_COUNT + 1))
+            fi
+          done
+
+          if [ "$STOPPED_COUNT" -eq "$TOTAL_TASKS" ]; then
+            echo "All tasks have reached STOPPED state."
+            break
+          fi
+
+          echo "$STOPPED_COUNT of $TOTAL_TASKS tasks are STOPPED. Retrying in 10 seconds..."
+          sleep 10
+        done
 
     - name: Deploy Amazon ECS task definition
       uses: aws-actions/amazon-ecs-deploy-task-definition@v1
@@ -75,16 +106,16 @@ jobs:
           --cluster middleware-test-cluster \
           --service ecs-mw-service \
           --desired-count 1
-        echo "Desired count set to 1"
+        echo "Desired count set to 1."
 
     - name: Wait for Service stability
       run: |
-        echo "Checking service stability"
+        echo "Checking service stability..."
         if aws ecs wait services-stable \
           --cluster middleware-test-cluster \
-          --service ecs-mw-service; then
-          echo "Service is up"
-        else 
-          echo "Service is unstable"
+          --services ecs-mw-service; then
+          echo "Service is stable."
+        else
+          echo "Service is unstable. Exiting."
           exit 1
         fi
