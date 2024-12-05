@@ -3,7 +3,7 @@ name: Deploy to AWS ECS (Master)
 on:
   push:
     branches:
-      - start-stop-3v2
+      - start-stop-3v
 
 jobs:
   build:
@@ -115,3 +115,4 @@ jobs:
           else
             echo "Service is unstable. Exiting."
             exit 1
+          fi
