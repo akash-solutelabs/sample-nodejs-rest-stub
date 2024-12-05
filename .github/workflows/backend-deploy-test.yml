@@ -12,7 +12,7 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v2
-
+      
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v1
         with:
@@ -54,16 +54,40 @@ jobs:
 
       - name: Wait for all tasks to reach STOPPED state
         run: |
-          echo "Waiting for all tasks to stop..."
-          while [[ $(aws ecs list-tasks \
-                      --cluster middleware-test-cluster \
-                      --service-name ecs-mw-service \
-                      --query "taskArns | length(@)" \
-                      --output text) -ne 0 ]]; do
-            echo "Tasks are still running. Retrying in 5 seconds..."
-            sleep 5
-          done
-          echo "All tasks are stopped."
+          echo "Fetching task ARNs for service ecs-mw-service in cluster middleware-test-cluster..."
+          TASK_ARNS=$(aws ecs list-tasks \
+            --cluster middleware-test-cluster \
+            --service-name ecs-mw-service \
+            --query "taskArns" \
+            --output text)
+
+          if [ -z "$TASK_ARNS" ]; then
+            echo "No tasks found for the service. Assuming all tasks are STOPPED."
+          else
+            echo "Waiting for all tasks to reach STOPPED state..."
+            while true; do
+              ALL_STOPPED=true
+              for TASK_ARN in $TASK_ARNS; do
+                TASK_STATUS=$(aws ecs describe-tasks \
+                  --cluster middleware-test-cluster \
+                  --tasks $TASK_ARN \
+                  --query "tasks[0].lastStatus" \
+                  --output text)
+                echo "Task $TASK_ARN status: $TASK_STATUS"
+                if [ "$TASK_STATUS" != "STOPPED" ]; then
+                  ALL_STOPPED=false
+                fi
+              done
+
+              if [ "$ALL_STOPPED" = true ]; then
+                echo "All tasks have reached STOPPED state."
+                break
+              fi
+
+              echo "Some tasks are still running or deactivating. Retrying in 5 seconds..."
+              sleep 5
+            done
+          fi
 
       - name: Deploy Amazon ECS task definition
         uses: aws-actions/amazon-ecs-deploy-task-definition@v1
