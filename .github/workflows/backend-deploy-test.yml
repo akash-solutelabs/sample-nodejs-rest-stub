@@ -79,25 +79,25 @@ jobs:
               --output text)
             echo "Task ARN: $TASK_ARN -> Status: $TASK_STATUS"
 
-            if [ "$TASK_STATUS" == "STOPPED" ]; then
-              STOPPED_COUNT=$((STOPPED_COUNT + 1))
-            elif [ "$TASK_STATUS" == "DEACTIVATING" ]; then
-              DEACTIVATING_COUNT=$((DEACTIVATING_COUNT + 1))
-            else
-              echo "Unexpected task status: $TASK_STATUS"
-            fi
+            # if [ "$TASK_STATUS" == "STOPPED" ]; then
+            #   STOPPED_COUNT=$((STOPPED_COUNT + 1))
+            # elif [ "$TASK_STATUS" == "DEACTIVATING" ]; then
+            #   DEACTIVATING_COUNT=$((DEACTIVATING_COUNT + 1))
+            # else
+            #   echo "Unexpected task status: $TASK_STATUS"
+            # fi
           done
 
-          echo "STOPPED: $STOPPED_COUNT / $TOTAL_TASKS | DEACTIVATING: $DEACTIVATING_COUNT / $TOTAL_TASKS"
+        #   echo "STOPPED: $STOPPED_COUNT / $TOTAL_TASKS | DEACTIVATING: $DEACTIVATING_COUNT / $TOTAL_TASKS"
 
-          if [ "$STOPPED_COUNT" -eq "$TOTAL_TASKS" ] && [ "$DEACTIVATING_COUNT" -eq 0 ]; then
-            echo "All tasks have reached STOPPED state."
-            break
-          fi
+        #   if [ "$STOPPED_COUNT" -eq "$TOTAL_TASKS" ] && [ "$DEACTIVATING_COUNT" -eq 0 ]; then
+        #     echo "All tasks have reached STOPPED state."
+        #     break
+        #   fi
 
-          echo "Retrying in 10 seconds..."
-          sleep 10
-        done
+        #   echo "Retrying in 10 seconds..."
+        #   sleep 10
+        # done
 
     - name: Deploy Amazon ECS task definition
       uses: aws-actions/amazon-ecs-deploy-task-definition@v1
